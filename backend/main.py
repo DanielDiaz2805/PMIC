@@ -1,26 +1,22 @@
 """
 main.py - API REST del Sistema PMIC
-=====================================
 Diagrama Nivel 1: caja Backend - API REST
 Diagrama Nivel 2: caja azul API REST FastAPI
 
 Endpoints:
   POST /api/procesar      -> recibe URLs + workers -> retorna proceso_id
   GET  /api/estado/{id}   -> consulta metricas     -> retorna estado
+  GET  /api/db/{id}       -> consulta base de datos -> retorna metadatos completos
 """
 
 import uuid
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl, field_validator
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from models import crear_proceso, obtener_proceso
 from pipeline import iniciar_pipeline_async
-
-
-# ─────────────────────────────────────────────
-# INICIALIZAR APP
-# ─────────────────────────────────────────────
+from database import inicializar_db, guardar_proceso, actualizar_estado_proceso, consultar_metadatos_proceso
 
 app = FastAPI(
     title       = "PMIC - Plataforma de Procesamiento Masivo de Imagenes",
@@ -28,7 +24,9 @@ app = FastAPI(
     version     = "1.0.0"
 )
 
-# Permitir peticiones desde el Frontend React
+# Inicializar base de datos al arrancar el servidor
+inicializar_db()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins     = ["http://localhost:5173", "http://localhost:3000"],
@@ -39,14 +37,10 @@ app.add_middleware(
 
 
 # ─────────────────────────────────────────────
-# MODELOS DE ENTRADA (lo que recibe la API)
+# MODELOS DE ENTRADA
 # ─────────────────────────────────────────────
 
 class ConfigWorkers(BaseModel):
-    """
-    Configuracion de workers por etapa.
-    El usuario define cuantos workers quiere para cada etapa.
-    """
     descarga:           int = 2
     redimensionamiento: int = 2
     conversion:         int = 2
@@ -63,23 +57,6 @@ class ConfigWorkers(BaseModel):
 
 
 class SolicitudProcesamiento(BaseModel):
-    """
-    JSON que envia el Frontend al POST /api/procesar
-
-    Ejemplo:
-    {
-        "urls": [
-            "https://example.com/foto1.jpg",
-            "https://example.com/foto2.jpg"
-        ],
-        "workers": {
-            "descarga": 3,
-            "redimensionamiento": 2,
-            "conversion": 2,
-            "marca_agua": 2
-        }
-    }
-    """
     urls:    list[str]
     workers: Optional[ConfigWorkers] = ConfigWorkers()
 
@@ -99,28 +76,20 @@ class SolicitudProcesamiento(BaseModel):
 
 @app.post("/api/procesar")
 async def iniciar_procesamiento(solicitud: SolicitudProcesamiento):
-    """
-    Diagrama Nivel 2: Actor -> API REST -> Cola de URLs
-
-    1. Recibe las URLs y configuracion de workers
-    2. Genera un UUID unico para identificar el proceso
-    3. Registra el proceso en el modulo de metricas
-    4. Arranca el pipeline en un hilo separado (no bloqueante)
-    5. Retorna el proceso_id inmediatamente
-
-    El usuario usa el proceso_id para consultar el estado despues.
-    """
-
-    # Generar ID unico para este proceso
     proceso_id = str(uuid.uuid4())
 
-    # Crear registro en el modulo de metricas
+    # Registrar en memoria
     crear_proceso(
         proceso_id     = proceso_id,
         total_imagenes = len(solicitud.urls)
     )
 
-    # Convertir config a diccionario
+    # Registrar en base de datos
+    guardar_proceso(
+        proceso_id = proceso_id,
+        total_urls = len(solicitud.urls)
+    )
+
     config_workers = {
         "descarga":           solicitud.workers.descarga,
         "redimensionamiento": solicitud.workers.redimensionamiento,
@@ -128,20 +97,17 @@ async def iniciar_procesamiento(solicitud: SolicitudProcesamiento):
         "marca_agua":         solicitud.workers.marca_agua,
     }
 
-    # Arrancar pipeline en hilo separado
-    # La API NO espera que el pipeline termine
     iniciar_pipeline_async(
-        proceso_id    = proceso_id,
-        urls          = solicitud.urls,
+        proceso_id     = proceso_id,
+        urls           = solicitud.urls,
         config_workers = config_workers
     )
 
-    # Retornar inmediatamente al usuario
     return {
-        "proceso_id":      proceso_id,
-        "mensaje":         "Pipeline iniciado correctamente",
-        "total_imagenes":  len(solicitud.urls),
-        "workers":         config_workers
+        "proceso_id":     proceso_id,
+        "mensaje":        "Pipeline iniciado correctamente",
+        "total_imagenes": len(solicitud.urls),
+        "workers":        config_workers
     }
 
 
@@ -151,25 +117,28 @@ async def iniciar_procesamiento(solicitud: SolicitudProcesamiento):
 
 @app.get("/api/estado/{proceso_id}")
 async def obtener_estado(proceso_id: str):
-    """
-    Diagrama Nivel 2: API REST -> Modulo de Metricas
-
-    Consulta el estado actual del pipeline y retorna
-    todas las metricas registradas por los workers.
-
-    El Frontend hace polling a este endpoint para
-    actualizar el dashboard en tiempo real.
-    """
-
     proceso = obtener_proceso(proceso_id)
-
     if not proceso:
-        raise HTTPException(
-            status_code = 404,
-            detail      = f"Proceso {proceso_id} no encontrado"
-        )
+        raise HTTPException(status_code=404, detail=f"Proceso {proceso_id} no encontrado")
+
+    # Actualizar estado en base de datos
+    actualizar_estado_proceso(proceso_id, proceso.estado.value)
 
     return proceso.to_dict()
+
+
+# ─────────────────────────────────────────────
+# ENDPOINT 3: GET /api/db/{proceso_id}
+# ─────────────────────────────────────────────
+
+@app.get("/api/db/{proceso_id}")
+async def obtener_metadatos_db(proceso_id: str):
+    """
+    Retorna todos los metadatos guardados en SQLite para un proceso.
+    Muestra exactamente qué worker procesó cada imagen y cuándo.
+    """
+    datos = consultar_metadatos_proceso(proceso_id)
+    return datos
 
 
 # ─────────────────────────────────────────────
@@ -184,20 +153,12 @@ async def raiz():
         "estado":    "activo",
         "endpoints": [
             "POST /api/procesar",
-            "GET  /api/estado/{proceso_id}"
+            "GET  /api/estado/{proceso_id}",
+            "GET  /api/db/{proceso_id}"
         ]
     }
 
 
-# ─────────────────────────────────────────────
-# ARRANCAR EL SERVIDOR
-# ─────────────────────────────────────────────
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host     = "0.0.0.0",
-        port     = 8000,
-        reload   = True
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
