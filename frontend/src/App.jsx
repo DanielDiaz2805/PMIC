@@ -63,7 +63,7 @@ export default function App() {
 
         {/* Header */}
         <div className="bg-white rounded-2xl shadow p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">🖼️ PMIC</h1>
+          <h1 className="text-3xl font-bold text-gray-800"> PMIC</h1>
           <p className="text-gray-500 mt-1">
             Plataforma de Procesamiento Masivo de Imágenes Concurrente
           </p>
