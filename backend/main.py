@@ -1,13 +1,4 @@
-"""
-main.py - API REST del Sistema PMIC
-Diagrama Nivel 1: caja Backend - API REST
-Diagrama Nivel 2: caja azul API REST FastAPI
 
-Endpoints:
-  POST /api/procesar      -> recibe URLs + workers -> retorna proceso_id
-  GET  /api/estado/{id}   -> consulta metricas     -> retorna estado
-  GET  /api/db/{id}       -> consulta base de datos -> retorna metadatos completos
-"""
 
 import uuid
 from fastapi import FastAPI, HTTPException

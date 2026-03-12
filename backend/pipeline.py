@@ -1,12 +1,4 @@
-"""
-pipeline.py - Orquestador del Pipeline Concurrente
-====================================================
-📍 Diagrama Nivel 2: conecta TODAS las etapas y colas
-   Es el director de orquesta — arranca y coordina todos los workers
 
-   Cola URLs → Descarga → Cola Redim → Redimension
-            → Cola Conv → Conversion → Cola Marca → MarcaAgua
-"""
 
 import threading
 from models import RegistroProceso, obtener_proceso, EstadoProceso

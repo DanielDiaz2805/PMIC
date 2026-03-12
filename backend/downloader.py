@@ -1,8 +1,4 @@
-"""
-downloader.py - Workers de Descarga
-Diagrama Nivel 2: ETAPA 1 - Cajas verdes (Worker D1, D2...DN)
-CONSUMIDOR de Cola URLs - PRODUCTOR de Cola Redimensionamiento
-"""
+
 
 import time
 import queue

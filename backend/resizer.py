@@ -1,8 +1,4 @@
-"""
-resizer.py - Workers de Redimensionamiento
-Diagrama Nivel 2: ETAPA 2 - Cajas moradas (Worker R1, R2...RN)
-CONSUMIDOR de Cola Redimensionamiento - PRODUCTOR de Cola Conversion
-"""
+
 
 import time
 import queue

@@ -1,9 +1,4 @@
-"""
-database.py - Capa de Base de Datos SQLite
-==========================================
-Guarda los metadatos de cada imagen procesada por etapa.
-SQLite no necesita instalación — es un archivo pmic.db en backend/
-"""
+
 
 import sqlite3
 import threading

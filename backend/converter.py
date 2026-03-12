@@ -1,8 +1,4 @@
-"""
-converter.py - Workers de Conversion de Formato
-Diagrama Nivel 2: ETAPA 3 - Cajas naranjas (Worker C1, C2...CN)
-CONSUMIDOR de Cola Conversion - PRODUCTOR de Cola Marca de Agua
-"""
+
 
 import time
 import queue

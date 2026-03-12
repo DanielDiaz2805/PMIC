@@ -1,10 +1,4 @@
-"""
-models.py — Módulo de Métricas
-==============================
-📍 Diagrama Nivel 2: Caja "Módulo de Métricas"
-   Todos los workers escriben aquí al terminar cada imagen.
-   La API REST consulta aquí cuando el usuario pide el estado.
-"""
+
 
 import threading
 from datetime import datetime

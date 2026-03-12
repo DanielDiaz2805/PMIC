@@ -1,8 +1,4 @@
-"""
-watermark.py - Workers de Marca de Agua
-Diagrama Nivel 2: ETAPA 4 - Cajas rojas (Worker M1, M2...MN)
-CONSUMIDOR de Cola Marca de Agua - escribe resultado final en disco
-"""
+
 
 import time
 import queue
