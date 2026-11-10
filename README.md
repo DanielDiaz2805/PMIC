@@ -4,7 +4,7 @@ Procesa lotes de imágenes a partir de sus URLs: las **descarga**, las **redimen
 
 > Proyecto académico de Ingeniería de Sistemas · Corporación Universitaria del Caribe (CECAR).
 
-![Dashboard de PMIC](docs/dashboard.png)
+
 
 ## El problema
 
