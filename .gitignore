@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Datos generados al ejecutar
+backend/storage/
+backend/pmic.db
+
+# Node
+node_modules/
+frontend/dist/
